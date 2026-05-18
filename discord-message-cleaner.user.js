@@ -154,23 +154,21 @@
     return snowflakeToTimestamp(msgId) < cutoff;
   }
 
-  // Determine if a message belongs to the target user.
-  // Group-start messages have an avatar with the user ID in the URL.
-  // Continuation messages inherit from the previous group-start.
+  // Determine if a message belongs to the target user via React fiber internals.
   function isOwnMessage(msgEl, userId) {
-    const avatar = msgEl.querySelector(`img[src*="avatars/${userId}"]`);
-    if (avatar) return true;
+    const fiberKey = Object.keys(msgEl).find(
+      (k) =>
+        k.startsWith("__reactFiber") || k.startsWith("__reactInternalInstance"),
+    );
+    if (!fiberKey) return false;
 
-    // Continuation message (no avatar) — walk back to group start
-    if (!msgEl.querySelector('img[src*="avatars/"]')) {
-      let prev = msgEl.previousElementSibling;
-      while (prev && prev.id?.startsWith("chat-messages-")) {
-        const prevAvatar = prev.querySelector('img[src*="avatars/"]');
-        if (prevAvatar) {
-          return prevAvatar.src.includes(`avatars/${userId}`);
-        }
-        prev = prev.previousElementSibling;
+    let fiber = msgEl[fiberKey];
+    for (let i = 0; i < 15 && fiber; i++) {
+      const props = fiber.memoizedProps || fiber.pendingProps;
+      if (props?.message?.author) {
+        return props.message.author.id === userId;
       }
+      fiber = fiber.return;
     }
 
     return false;
