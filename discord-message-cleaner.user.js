@@ -265,7 +265,14 @@
       updateUI();
       return;
     }
-    CONFIG.keepDays = parseInt(document.getElementById("dc-days").value) || 7;
+    const daysVal = parseInt(document.getElementById("dc-days").value);
+    if (isNaN(daysVal) || daysVal < 0) {
+      log("Invalid 'keep days' value. Please enter a number >= 0.");
+      running = false;
+      updateUI();
+      return;
+    }
+    CONFIG.keepDays = daysVal;
     log(`Detected user ID: ${userId}`);
     log(`Will delete messages older than ${CONFIG.keepDays} days`);
 
